@@ -1,0 +1,110 @@
+{
+  "system": "MedDocAssistant",
+  "components": [
+    {
+      "id": "web_ui",
+      "type": "interface",
+      "name": "Веб-интерфейс врача"
+    },
+    {
+      "id": "rest_api",
+      "type": "interface",
+      "name": "REST API для медицинских систем"
+    },
+    {
+      "id": "ehr_database",
+      "type": "data_store",
+      "name": "База электронных медицинских карт",
+      "data_categories": ["medical_data", "personal_data"]
+    },
+    {
+      "id": "llm_annotator",
+      "type": "llm",
+      "name": "LLM-модуль аннотирования",
+      "llm_roles": ["active_generation"],
+      "autonomy": "human_in_the_loop"
+    },
+    {
+      "id": "annotation_store",
+      "type": "data_store",
+      "name": "Хранилище сгенерированных аннотаций",
+      "data_categories": ["generated_annotations", "medical_data"]
+    },
+    {
+      "id": "finetuning_pipeline",
+      "type": "training_pipeline",
+      "name": "Конвейер инкрементального дообучения",
+      "uses_operational_data": true
+    }
+  ],
+  "flows": [
+    {
+      "id": "f1",
+      "from": "ehr_database",
+      "to": "llm_annotator",
+      "lifecycle_stage": "processing",
+      "data_categories": ["medical_data", "personal_data"]
+    },
+    {
+      "id": "f2",
+      "from": "llm_annotator",
+      "to": "web_ui",
+      "lifecycle_stage": "generation",
+      "data_categories": ["generated_annotations", "medical_data"]
+    },
+    {
+      "id": "f3",
+      "from": "llm_annotator",
+      "to": "annotation_store",
+      "lifecycle_stage": "storage",
+      "data_categories": ["generated_annotations", "medical_data"]
+    },
+    {
+      "id": "f4",
+      "from": "annotation_store",
+      "to": "finetuning_pipeline",
+      "lifecycle_stage": "fine_tuning",
+      "data_categories": ["generated_annotations", "medical_data"]
+    },
+    {
+      "id": "f5",
+      "from": "rest_api",
+      "to": "llm_annotator",
+      "lifecycle_stage": "processing",
+      "data_categories": ["medical_data"]
+    }
+  ],
+  "actors": [
+    {
+      "id": "clinician",
+      "type": "insider",
+      "access_to": ["web_ui"],
+      "can_make_repeated_queries": true
+    },
+    {
+      "id": "external_api_user",
+      "type": "external_attacker",
+      "access_to": ["rest_api"],
+      "can_make_repeated_queries": true
+    },
+    {
+      "id": "ml_operator",
+      "type": "supply_chain_operator",
+      "access_to": ["finetuning_pipeline"],
+      "can_make_repeated_queries": false
+    }
+  ],
+  "controls": [
+    "human_review",
+    "api_rate_limit",
+    "audit_log"
+  ],
+  "external_findings": [
+    {
+      "id": "garak_promptinject_failed",
+      "source": "garak",
+      "category": "prompt_injection",
+      "result": "failed"
+    }
+  ]
+}

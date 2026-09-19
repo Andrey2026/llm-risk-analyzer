@@ -1,0 +1,94 @@
+{
+  "rules": [
+    {
+      "id": "llm_prompt_injection_sensitive_generation",
+      "title": "Инъекция запроса против компонента {component.name}",
+      "description": "Пользователь или противник может обратиться к LLM-компоненту, который генерирует ответы на основе чувствительных данных.",
+      "scope": "flow_component_actor",
+      "when": [
+        {"left": "component.type", "op": "eq", "value": "llm"},
+        {"left": "component.llm_roles", "op": "contains", "value": "active_generation"},
+        {"left": "flow.data_categories", "op": "contains_any", "value": ["personal_data", "medical_data", "financial_data", "trade_secret"]},
+        {"op": "actor_can_reach_component"},
+        {"left": "actor.type", "op": "contains_any", "value": ["external_attacker", "insider"]}
+      ],
+      "levels": ["data", "model", "process"],
+      "dimensions": {
+        "lifecycle": ["processing", "generation"],
+        "llm_role": "active_generation"
+      },
+      "impact": 3,
+      "manageability": 3,
+      "recommended_controls": ["input_validation", "prompt_isolation", "output_validation", "rate_limit"],
+      "cumulative": false
+    },
+    {
+      "id": "llm_memorization_from_operational_finetuning",
+      "title": "Риск запоминания данных в компоненте {component.name}",
+      "description": "Операционные или сгенерированные данные могут попасть в дообучение и позднее быть воспроизведены моделью.",
+      "scope": "flow_component",
+      "when": [
+        {"left": "component.type", "op": "eq", "value": "training_pipeline"},
+        {"left": "component.uses_operational_data", "op": "eq", "value": true},
+        {"left": "flow.lifecycle_stage", "op": "eq", "value": "fine_tuning"},
+        {"left": "flow.data_categories", "op": "contains_any", "value": ["personal_data", "medical_data", "financial_data", "trade_secret", "generated_annotations"]}
+      ],
+      "levels": ["data", "model"],
+      "dimensions": {
+        "lifecycle": ["fine_tuning", "processing"],
+        "llm_role": "fine_tuning",
+        "adversary": "insider"
+      },
+      "impact": 4,
+      "manageability": 1,
+      "recommended_controls": ["data_minimization", "dp_sgd", "training_data_filtering", "memorization_tests"],
+      "cumulative": false
+    },
+    {
+      "id": "cumulative_inference_by_repeated_queries",
+      "title": "Кумулятивное извлечение данных через повторные запросы к компоненту {component.name}",
+      "description": "Серия легитимных запросов может раскрыть чувствительную информацию через совокупность ответов или метаданных.",
+      "scope": "flow_component_actor",
+      "when": [
+        {"left": "component.type", "op": "eq", "value": "llm"},
+        {"left": "component.llm_roles", "op": "contains_any", "value": ["active_generation", "rag"]},
+        {"left": "actor.type", "op": "eq", "value": "insider"},
+        {"left": "actor.can_make_repeated_queries", "op": "eq", "value": true},
+        {"left": "flow.data_categories", "op": "contains_any", "value": ["personal_data", "medical_data", "financial_data", "trade_secret"]},
+        {"op": "actor_can_reach_component"},
+        {"op": "missing_control", "value": "behavioral_monitoring"}
+      ],
+      "levels": ["data", "model", "process"],
+      "dimensions": {
+        "lifecycle": ["processing", "generation", "storage"],
+        "llm_role": "active_generation",
+        "adversary": "insider"
+      },
+      "impact": 4,
+      "manageability": 1,
+      "recommended_controls": ["behavioral_monitoring", "query_budget", "aggregation_thresholds", "metadata_redaction"],
+      "cumulative": true
+    },
+    {
+      "id": "training_data_poisoning",
+      "title": "Отравление обучающих данных в компоненте {component.name}",
+      "description": "Конвейер дообучения использует операционные данные, на которые может повлиять внешний противник или участник цепочки поставок.",
+      "scope": "flow_component_actor",
+      "when": [
+        {"left": "component.type", "op": "eq", "value": "training_pipeline"},
+        {"left": "component.uses_operational_data", "op": "eq", "value": true},
+        {"left": "actor.type", "op": "contains_any", "value": ["external_attacker", "supply_chain_operator"]},
+        {"left": "flow.lifecycle_stage", "op": "eq", "value": "fine_tuning"}
+      ],
+      "levels": ["data", "model", "process"],
+      "dimensions": {
+        "lifecycle": "fine_tuning",
+        "llm_role": "fine_tuning"
+      },
+      "impact": 2,
+      "manageability": 3,
+      "recommended_controls": ["data_provenance", "training_data_validation", "approval_workflow"],
+      "cumulative": false
+    }
+  ]
+}

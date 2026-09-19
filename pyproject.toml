@@ -1,0 +1,24 @@
+[project]
+name = "llm-risk-analyzer"
+version = "0.1.0"
+description = "Rule-based risk analyzer for LLM-integrated information systems"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+  {name = "Andrey Martynov"}
+]
+keywords = ["llm", "risk-analysis", "threat-modeling", "security", "privacy"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Security",
+]
+
+[project.scripts]
+llm-risk-analyzer = "llm_risk_analyzer.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
